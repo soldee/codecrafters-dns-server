@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"strings"
 )
 
 type DnsMessage struct {
@@ -33,6 +34,9 @@ type HeaderFlags struct {
 }
 
 type DnsQuestion struct {
+	QNAME  string
+	QTYPE  uint16
+	QCLASS uint16
 }
 
 type DnsAnswer struct {
@@ -45,7 +49,10 @@ type DnsAdditional struct {
 }
 
 func (msg *DnsMessage) serialize() []byte {
-	return msg.Header.serialize()
+	return append(
+		msg.Header.serialize(),
+		msg.Question.serialize()...,
+	)
 }
 
 func (header *DnsHeader) serialize() []byte {
@@ -95,4 +102,26 @@ func (flags *HeaderFlags) serialize() uint16 {
 	flagsBytes = flagsBytes | uint16(flags.RCODE&0x0F)
 
 	return flagsBytes
+}
+
+func (question *DnsQuestion) serialize() []byte {
+	var questionBytes []byte
+
+	questionBytes = append(questionBytes, question.serializeLabels()...)
+	binary.BigEndian.AppendUint16(questionBytes, question.QTYPE)
+	binary.BigEndian.AppendUint16(questionBytes, question.QCLASS)
+
+	return questionBytes
+}
+
+func (question *DnsQuestion) serializeLabels() []byte {
+	var labelsBytes []byte
+
+	labels := strings.Split(question.QNAME, ".")
+	for _, label := range labels {
+		labelsBytes = append(labelsBytes, uint8(len(label)))
+		labelsBytes = append(labelsBytes, label...)
+	}
+	labelsBytes = append(labelsBytes, 0x00)
+	return labelsBytes
 }

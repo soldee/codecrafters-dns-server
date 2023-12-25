@@ -9,7 +9,7 @@ func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
-	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
+	udpAddr, err := net.ResolveUDPAddr("udp", "192.168.33.1:2053")
 	if err != nil {
 		fmt.Println("Failed to resolve UDP address:", err)
 		return
@@ -34,32 +34,41 @@ func main() {
 		receivedData := string(buf[:size])
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
-		// Create an empty response
-		response := DnsMessage{
-			Header: DnsHeader{
-				ID: 1234,
-				Flags: HeaderFlags{
-					QR:     true,
-					OPCODE: 0,
-					AA:     false,
-					TC:     false,
-					RD:     false,
-					RA:     false,
-					Z:      0,
-					RCODE:  0,
-				},
-				QDCOUNT: 0,
-				ANCOUNT: 0,
-				NSCOUNT: 0,
-				ARCOUNT: 0,
-			},
-		}
+		var response *DnsMessage = generateDnsMessageResponse()
 
 		fmt.Printf("%08b\n", response.serialize())
+		fmt.Println(response.serialize())
 
 		_, err = udpConn.WriteToUDP(response.serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
+	}
+}
+
+func generateDnsMessageResponse() *DnsMessage {
+	return &DnsMessage{
+		Header: DnsHeader{
+			ID: 1234,
+			Flags: HeaderFlags{
+				QR:     true,
+				OPCODE: 0,
+				AA:     false,
+				TC:     false,
+				RD:     false,
+				RA:     false,
+				Z:      0,
+				RCODE:  0,
+			},
+			QDCOUNT: 1,
+			ANCOUNT: 0,
+			NSCOUNT: 0,
+			ARCOUNT: 0,
+		},
+		Question: DnsQuestion{
+			QNAME:  "codecrafters.io",
+			QTYPE:  1,
+			QCLASS: 1,
+		},
 	}
 }
