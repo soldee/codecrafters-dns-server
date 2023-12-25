@@ -35,9 +35,29 @@ func main() {
 		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
 
 		// Create an empty response
-		response := []byte{}
+		response := DnsMessage{
+			Header: DnsHeader{
+				ID: 1234,
+				Flags: HeaderFlags{
+					QR:     true,
+					OPCODE: 0,
+					AA:     false,
+					TC:     false,
+					RD:     false,
+					RA:     false,
+					Z:      0,
+					RCODE:  0,
+				},
+				QDCOUNT: 0,
+				ANCOUNT: 0,
+				NSCOUNT: 0,
+				ARCOUNT: 0,
+			},
+		}
 
-		_, err = udpConn.WriteToUDP(response, source)
+		fmt.Printf("%08b\n", response.serialize())
+
+		_, err = udpConn.WriteToUDP(response.serialize(), source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
