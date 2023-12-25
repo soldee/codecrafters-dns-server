@@ -108,8 +108,8 @@ func (question *DnsQuestion) serialize() []byte {
 	var questionBytes []byte
 
 	questionBytes = append(questionBytes, question.serializeLabels()...)
-	binary.BigEndian.AppendUint16(questionBytes, question.QTYPE)
-	binary.BigEndian.AppendUint16(questionBytes, question.QCLASS)
+	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QTYPE)
+	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QCLASS)
 
 	return questionBytes
 }
