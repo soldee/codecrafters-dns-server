@@ -40,6 +40,12 @@ type DnsQuestion struct {
 }
 
 type DnsAnswer struct {
+	NAME     string
+	TYPE     uint16
+	CLASS    uint16
+	TTL      uint32
+	RDLENGTH uint16
+	RDATA    []byte
 }
 
 type DnsAuthority struct {
@@ -49,10 +55,15 @@ type DnsAdditional struct {
 }
 
 func (msg *DnsMessage) serialize() []byte {
-	return append(
+	msgBytes := append(
 		msg.Header.serialize(),
 		msg.Question.serialize()...,
 	)
+	msgBytes = append(
+		msgBytes,
+		msg.Answer.serialize()...,
+	)
+	return msgBytes
 }
 
 func (header *DnsHeader) serialize() []byte {
@@ -107,21 +118,33 @@ func (flags *HeaderFlags) serialize() uint16 {
 func (question *DnsQuestion) serialize() []byte {
 	var questionBytes []byte
 
-	questionBytes = append(questionBytes, question.serializeLabels()...)
+	questionBytes = append(questionBytes, serializeLabels(question.QNAME)...)
 	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QTYPE)
 	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QCLASS)
 
 	return questionBytes
 }
 
-func (question *DnsQuestion) serializeLabels() []byte {
+func serializeLabels(labelsStr string) []byte {
 	var labelsBytes []byte
 
-	labels := strings.Split(question.QNAME, ".")
+	labels := strings.Split(labelsStr, ".")
 	for _, label := range labels {
 		labelsBytes = append(labelsBytes, uint8(len(label)))
 		labelsBytes = append(labelsBytes, label...)
 	}
 	labelsBytes = append(labelsBytes, 0x00)
 	return labelsBytes
+}
+
+func (answer *DnsAnswer) serialize() []byte {
+	var answerBytes []byte
+
+	answerBytes = append(answerBytes, serializeLabels(answer.NAME)...)
+	answerBytes = binary.BigEndian.AppendUint16(answerBytes, answer.TYPE)
+	answerBytes = binary.BigEndian.AppendUint16(answerBytes, answer.CLASS)
+	answerBytes = binary.BigEndian.AppendUint32(answerBytes, answer.TTL)
+	answerBytes = binary.BigEndian.AppendUint16(answerBytes, answer.RDLENGTH)
+	answerBytes = append(answerBytes, answer.RDATA...)
+	return answerBytes
 }

@@ -61,7 +61,7 @@ func generateDnsMessageResponse() *DnsMessage {
 				RCODE:  0,
 			},
 			QDCOUNT: 1,
-			ANCOUNT: 0,
+			ANCOUNT: 1,
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
@@ -69,6 +69,14 @@ func generateDnsMessageResponse() *DnsMessage {
 			QNAME:  "codecrafters.io",
 			QTYPE:  1,
 			QCLASS: 1,
+		},
+		Answer: DnsAnswer{
+			NAME:     "codecrafters.io",
+			TYPE:     TYPE_A,
+			CLASS:    CLASS_IN,
+			TTL:      60,
+			RDLENGTH: 4,
+			RDATA:    []byte{8, 8, 8, 8},
 		},
 	}
 }
