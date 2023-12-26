@@ -151,15 +151,15 @@ func (answer *DnsAnswer) serialize() []byte {
 
 func deserializeMessage(msgBytes []byte) *DnsMessage {
 	dnsHeader := deserializeHeader(msgBytes[0:13])
-	//offsetAcc := 13
-	//dnsQuestion, questionOffset := deserializeQuestion(msgBytes[offsetAcc:])
-	//offsetAcc += questionOffset
-	//dnsAnswer, _ := deserializeAnswer(msgBytes[offsetAcc:])
+	offsetAcc := 12
+	dnsQuestion, questionOffset := deserializeQuestion(msgBytes[offsetAcc:])
+	offsetAcc += questionOffset
+	dnsAnswer, _ := deserializeAnswer(msgBytes[offsetAcc:])
 
 	return &DnsMessage{
-		Header: *dnsHeader,
-		//Question: *dnsQuestion,
-		//Answer:   *dnsAnswer,
+		Header:   *dnsHeader,
+		Question: *dnsQuestion,
+		Answer:   *dnsAnswer,
 	}
 }
 
@@ -187,7 +187,7 @@ func deserializeHeaderFlags(flagsBytes []byte) *HeaderFlags {
 	}
 }
 
-/*func deserializeQuestion(questionBytes []byte) (*DnsQuestion, int) {
+func deserializeQuestion(questionBytes []byte) (*DnsQuestion, int) {
 	labels, labelsOffset := deserializeLabels(questionBytes)
 	return &DnsQuestion{
 		QNAME:  labels,
@@ -197,19 +197,23 @@ func deserializeHeaderFlags(flagsBytes []byte) *HeaderFlags {
 }
 
 func deserializeLabels(labelsBytes []byte) (string, int) {
+	//6google3com0
 	var labels string
 	var offset int = 1
 	var labelBytesLeft uint8 = 0
 	for i, b := range labelsBytes {
-		offset++
 		if b == 0x00 {
 			break
 		}
-		if labelBytesLeft == 0 && i != 0 {
-			labelBytesLeft = uint8(b) - 1
-			labels += "."
+		offset++
+		if labelBytesLeft == 0 {
+			labelBytesLeft = uint8(b)
+			if i != 0 {
+				labels += "."
+			}
 		} else {
 			labels += string(b)
+			labelBytesLeft--
 		}
 	}
 	return labels, offset
@@ -224,6 +228,6 @@ func deserializeAnswer(answerBytes []byte) (*DnsAnswer, int) {
 		CLASS:    binary.BigEndian.Uint16(answerBytes[offset+2 : offset+4]),
 		TTL:      binary.BigEndian.Uint32(answerBytes[offset+4 : offset+8]),
 		RDLENGTH: rdlength,
-		RDATA:    answerBytes[offset+8 : offset+int(rdlength)+1],
-	}, offset + int(rdlength) + 1
-}*/
+		RDATA:    answerBytes[offset+10 : offset+10+int(rdlength)],
+	}, offset + 10 + int(rdlength) + 1
+}
