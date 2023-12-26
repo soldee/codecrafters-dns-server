@@ -148,3 +148,82 @@ func (answer *DnsAnswer) serialize() []byte {
 	answerBytes = append(answerBytes, answer.RDATA...)
 	return answerBytes
 }
+
+func deserializeMessage(msgBytes []byte) *DnsMessage {
+	dnsHeader := deserializeHeader(msgBytes[0:13])
+	//offsetAcc := 13
+	//dnsQuestion, questionOffset := deserializeQuestion(msgBytes[offsetAcc:])
+	//offsetAcc += questionOffset
+	//dnsAnswer, _ := deserializeAnswer(msgBytes[offsetAcc:])
+
+	return &DnsMessage{
+		Header: *dnsHeader,
+		//Question: *dnsQuestion,
+		//Answer:   *dnsAnswer,
+	}
+}
+
+func deserializeHeader(headerBytes []byte) *DnsHeader {
+	return &DnsHeader{
+		ID:      binary.BigEndian.Uint16(headerBytes[0:2]),
+		Flags:   *deserializeHeaderFlags(headerBytes[2:4]),
+		QDCOUNT: binary.BigEndian.Uint16(headerBytes[4:6]),
+		ANCOUNT: binary.BigEndian.Uint16(headerBytes[6:8]),
+		NSCOUNT: binary.BigEndian.Uint16(headerBytes[8:10]),
+		ARCOUNT: binary.BigEndian.Uint16(headerBytes[10:12]),
+	}
+}
+
+func deserializeHeaderFlags(flagsBytes []byte) *HeaderFlags {
+	return &HeaderFlags{
+		QR:     (flagsBytes[0] & 0x80) != 0,
+		OPCODE: flagsBytes[0] & 0x78 >> 3,
+		AA:     (flagsBytes[0] & 0x4) != 0,
+		TC:     (flagsBytes[0] & 0x2) != 0,
+		RD:     (flagsBytes[0] & 0x1) != 0,
+		RA:     (flagsBytes[1] & 0x80) != 0,
+		Z:      flagsBytes[1] & 0x70 >> 4,
+		RCODE:  flagsBytes[1] & 0x0F,
+	}
+}
+
+/*func deserializeQuestion(questionBytes []byte) (*DnsQuestion, int) {
+	labels, labelsOffset := deserializeLabels(questionBytes)
+	return &DnsQuestion{
+		QNAME:  labels,
+		QTYPE:  binary.BigEndian.Uint16(questionBytes[labelsOffset : labelsOffset+2]),
+		QCLASS: binary.BigEndian.Uint16(questionBytes[labelsOffset+2 : labelsOffset+4]),
+	}, labelsOffset + 4
+}
+
+func deserializeLabels(labelsBytes []byte) (string, int) {
+	var labels string
+	var offset int = 1
+	var labelBytesLeft uint8 = 0
+	for i, b := range labelsBytes {
+		offset++
+		if b == 0x00 {
+			break
+		}
+		if labelBytesLeft == 0 && i != 0 {
+			labelBytesLeft = uint8(b) - 1
+			labels += "."
+		} else {
+			labels += string(b)
+		}
+	}
+	return labels, offset
+}
+
+func deserializeAnswer(answerBytes []byte) (*DnsAnswer, int) {
+	labels, offset := deserializeLabels(answerBytes)
+	rdlength := binary.BigEndian.Uint16(answerBytes[offset+8 : offset+10])
+	return &DnsAnswer{
+		NAME:     labels,
+		TYPE:     binary.BigEndian.Uint16(answerBytes[offset : offset+2]),
+		CLASS:    binary.BigEndian.Uint16(answerBytes[offset+2 : offset+4]),
+		TTL:      binary.BigEndian.Uint32(answerBytes[offset+4 : offset+8]),
+		RDLENGTH: rdlength,
+		RDATA:    answerBytes[offset+8 : offset+int(rdlength)+1],
+	}, offset + int(rdlength) + 1
+}*/

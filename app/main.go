@@ -31,34 +31,44 @@ func main() {
 			break
 		}
 
-		receivedData := string(buf[:size])
-		fmt.Printf("Received %d bytes from %s: %s\n", size, source, receivedData)
+		receivedData := buf[:size]
+		fmt.Printf("Request DNS message bytes: %08b\n", receivedData)
+		fmt.Printf("Request DNS message hex from %s: %v\n", source, receivedData)
 
-		var response *DnsMessage = generateDnsMessageResponse()
+		receivedMessage := deserializeMessage(receivedData)
+		fmt.Printf("Request DNS message: %+v\n", receivedMessage)
 
-		fmt.Printf("%08b\n", response.serialize())
-		fmt.Println(response.serialize())
+		var responseMessage *DnsMessage = generateDnsMessageResponse(receivedMessage)
+		fmt.Printf("Response DNS message: %+v\n", responseMessage)
+		var response = responseMessage.serialize()
+		fmt.Printf("Response DNS message bytes: %08b\n", response)
+		fmt.Printf("Response DNS message hex: %v", response)
 
-		_, err = udpConn.WriteToUDP(response.serialize(), source)
+		_, err = udpConn.WriteToUDP(response, source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
 	}
 }
 
-func generateDnsMessageResponse() *DnsMessage {
+func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
+	var rcode uint8 = 0
+	if receivedMessage.Header.Flags.OPCODE != 0 {
+		rcode = 4
+	}
+
 	return &DnsMessage{
 		Header: DnsHeader{
-			ID: 1234,
+			ID: receivedMessage.Header.ID,
 			Flags: HeaderFlags{
 				QR:     true,
-				OPCODE: 0,
+				OPCODE: receivedMessage.Header.Flags.OPCODE,
 				AA:     false,
 				TC:     false,
-				RD:     false,
+				RD:     receivedMessage.Header.Flags.RD,
 				RA:     false,
 				Z:      0,
-				RCODE:  0,
+				RCODE:  rcode,
 			},
 			QDCOUNT: 1,
 			ANCOUNT: 1,
