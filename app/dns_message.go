@@ -153,9 +153,9 @@ func serializeAnswers(answers []DnsAnswer) []byte {
 func deserializeMessage(msgBytes []byte) *DnsMessage {
 	dnsHeader := deserializeHeader(msgBytes[0:13])
 	offsetAcc := 12
-	dnsQuestions, questionsOffset := deserializeQuestions(msgBytes[offsetAcc:], dnsHeader.QDCOUNT)
+	dnsQuestions, questionsOffset := deserializeQuestions(msgBytes[offsetAcc:], dnsHeader.QDCOUNT, msgBytes[:offsetAcc])
 	offsetAcc += questionsOffset
-	dnsAnswers, _ := deserializeAnswers(msgBytes[offsetAcc:], dnsHeader.ANCOUNT)
+	dnsAnswers, _ := deserializeAnswers(msgBytes[offsetAcc:], dnsHeader.ANCOUNT, msgBytes[:offsetAcc])
 
 	return &DnsMessage{
 		Header:    *dnsHeader,
@@ -188,12 +188,12 @@ func deserializeHeaderFlags(flagsBytes []byte) *HeaderFlags {
 	}
 }
 
-func deserializeQuestions(questionBytes []byte, qdCount uint16) ([]DnsQuestion, int) {
+func deserializeQuestions(questionBytes []byte, qdCount uint16, readBytes []byte) ([]DnsQuestion, int) {
 	questions := make([]DnsQuestion, qdCount)
 	offset := 0
 
 	for i := 0; i < int(qdCount); i++ {
-		labels, labelsOffset := deserializeLabels(questionBytes[offset:])
+		labels, labelsOffset := deserializeLabels(questionBytes[offset:], readBytes)
 		offset += labelsOffset
 		questions[i] = DnsQuestion{
 			QNAME:  labels,
@@ -205,10 +205,11 @@ func deserializeQuestions(questionBytes []byte, qdCount uint16) ([]DnsQuestion, 
 	return questions, offset
 }
 
-func deserializeLabels(labelsBytes []byte) (string, int) {
+func deserializeLabels(labelsBytes []byte, readBytes []byte) (string, int) {
 	var labels string
 	var offset int = 1
 	var labelBytesLeft uint8 = 0
+	var pointer uint16 = 0
 	for i, b := range labelsBytes {
 		if b == 0x00 {
 			break
@@ -216,6 +217,12 @@ func deserializeLabels(labelsBytes []byte) (string, int) {
 		offset++
 		if labelBytesLeft == 0 {
 			labelBytesLeft = uint8(b)
+			if labelBytesLeft&0xC0 == 0xC0 {
+				pointer = (uint16(labelBytesLeft&0x3F) << 8) | uint16(labelsBytes[offset-1])
+				pointerLabel, _ := deserializeLabels(readBytes[pointer:], readBytes)
+				labels += pointerLabel
+				break
+			}
 			if i != 0 {
 				labels += "."
 			}
@@ -227,12 +234,12 @@ func deserializeLabels(labelsBytes []byte) (string, int) {
 	return labels, offset
 }
 
-func deserializeAnswers(answerBytes []byte, anCount uint16) ([]DnsAnswer, int) {
+func deserializeAnswers(answerBytes []byte, anCount uint16, readBytes []byte) ([]DnsAnswer, int) {
 	answers := make([]DnsAnswer, anCount)
 	offset := 0
 
 	for i := 0; i < int(anCount); i++ {
-		labels, labelsOffset := deserializeLabels(answerBytes[offset:])
+		labels, labelsOffset := deserializeLabels(answerBytes[offset:], readBytes)
 		offset += labelsOffset
 		rdlength := binary.BigEndian.Uint16(answerBytes[offset+8 : offset+10])
 		answers[i] = DnsAnswer{

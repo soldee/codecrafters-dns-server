@@ -9,7 +9,7 @@ import (
 func TestDeserializeLabels(t *testing.T) {
 	labelsBytes := []byte{6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 100, 50, 100} //google.com label encoded(6google3com0) + random padding after null byte
 	expected := "google.com"
-	labels, bytesRead := deserializeLabels(labelsBytes)
+	labels, bytesRead := deserializeLabels(labelsBytes, labelsBytes)
 	if bytesRead != 12 {
 		t.Errorf("Expected 12 bytesRead but got %v", bytesRead)
 	}
@@ -21,9 +21,23 @@ func TestDeserializeLabels(t *testing.T) {
 func TestDeserializeEmptyLabels(t *testing.T) {
 	labelsBytes := []byte{0} // null byte only
 	expected := ""
-	labels, bytesRead := deserializeLabels(labelsBytes)
+	labels, bytesRead := deserializeLabels(labelsBytes, labelsBytes)
 	if bytesRead != 1 {
 		t.Errorf("Expected 1 bytesRead but got %v", bytesRead)
+	}
+	if labels != expected {
+		t.Errorf("Expected '%s' but got '%s'", expected, labels)
+	}
+}
+
+func TestDeserializeLabelsWithPointer(t *testing.T) {
+	labelsBytes := []byte{4, 103, 103, 103, 103, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 100, 50, 100} //gggg.google.com label encoded(6google3com0) + random padding after null byte
+	labelsBytesWithPointer := []byte{192, 5, 100, 100, 100}                                                         // pointer to "google.com" with offset 5 + padding
+
+	expected := "google.com"
+	labels, bytesRead := deserializeLabels(labelsBytesWithPointer, labelsBytes)
+	if bytesRead != 2 {
+		t.Errorf("Expected 2 bytesRead but got %v", bytesRead)
 	}
 	if labels != expected {
 		t.Errorf("Expected '%s' but got '%s'", expected, labels)
@@ -45,7 +59,7 @@ func TestDeserializeOneQuestion(t *testing.T) {
 		QTYPE:  TYPE_A,
 		QCLASS: CLASS_IN,
 	}
-	dnsQuestions, _ := deserializeQuestions(in, 1)
+	dnsQuestions, _ := deserializeQuestions(in, 1, in)
 
 	if len(dnsQuestions) != 1 {
 		t.Errorf("Expected only 1 question but read %v", len(dnsQuestions))
@@ -67,7 +81,7 @@ func TestDeserializeMultipleQuestions(t *testing.T) {
 		QTYPE:  TYPE_CNAME,
 		QCLASS: CLASS_HS,
 	}}
-	dnsQuestions, _ := deserializeQuestions(in, 2)
+	dnsQuestions, _ := deserializeQuestions(in, 2, in)
 
 	if len(dnsQuestions) != 2 {
 		t.Errorf("Expected 2 questions but read %v", len(dnsQuestions))
@@ -92,7 +106,7 @@ func TestDeserializeOneAnswer(t *testing.T) {
 		RDATA:    []byte{8, 8, 8, 8},
 	}}
 
-	dnsAnswers, _ := deserializeAnswers(in, 1)
+	dnsAnswers, _ := deserializeAnswers(in, 1, in)
 
 	t.Logf("dnsAnswers: %v", dnsAnswers)
 	if len(dnsAnswers) != 1 {
@@ -122,7 +136,7 @@ func TestDeserializeMultipleAnswers(t *testing.T) {
 		RDATA:    []byte{10, 10, 10, 10},
 	}}
 
-	dnsAnswers, offset := deserializeAnswers(in, 2)
+	dnsAnswers, offset := deserializeAnswers(in, 2, in)
 
 	t.Logf("dnsAnswers: %v", dnsAnswers)
 	if len(dnsAnswers) != 2 {
