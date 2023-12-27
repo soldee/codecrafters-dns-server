@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -44,6 +45,27 @@ func TestDeserializeLabelsWithPointer(t *testing.T) {
 	}
 }
 
+func TestDeserializeLabelsWithPointer2(t *testing.T) {
+	labelsBytes := []byte{112, 146, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 97, 98, 99, 17, 108, 111, 110, 103, 97, 115, 115, 100, 111, 109, 97, 105, 110, 110, 97, 109, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 3, 100, 101, 102, 192, 16, 0, 1, 0, 1} // abc.longassdomainname.com + pointer (192 16)
+	expected := "def.longassdomainname.com"
+	offset := 43
+
+	labels, bytesRead := deserializeLabels(labelsBytes[offset:], labelsBytes[:offset])
+	if bytesRead != 6 {
+		t.Errorf("Expected 2 bytesRead but got %v", bytesRead)
+	}
+	if labels != expected {
+		t.Errorf("Expected '%s' but got '%s'", expected, labels)
+	}
+}
+
+func TestDatagram(t *testing.T) {
+	datagramBytes := []byte{112, 146, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 3, 97, 98, 99, 17, 108, 111, 110, 103, 97, 115, 115, 100, 111, 109, 97, 105, 110, 110, 97, 109, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 3, 100, 101, 102, 192, 16, 0, 1, 0, 1}
+	fmt.Printf("datagramBytes: %v\n\n", datagramBytes)
+	dnsMessage := deserializeMessage(datagramBytes)
+	t.Logf("dns message: %v\n", dnsMessage)
+}
+
 func TestSerializeLabels(t *testing.T) {
 	expectedBytes := []byte{6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0} //google.com label encoded
 	labelsBytes := serializeLabels("google.com")
@@ -59,7 +81,8 @@ func TestDeserializeOneQuestion(t *testing.T) {
 		QTYPE:  TYPE_A,
 		QCLASS: CLASS_IN,
 	}
-	dnsQuestions, _ := deserializeQuestions(in, 1, in)
+	offset := 0
+	dnsQuestions := deserializeQuestions(in, 1, &offset)
 
 	if len(dnsQuestions) != 1 {
 		t.Errorf("Expected only 1 question but read %v", len(dnsQuestions))
@@ -81,7 +104,8 @@ func TestDeserializeMultipleQuestions(t *testing.T) {
 		QTYPE:  TYPE_CNAME,
 		QCLASS: CLASS_HS,
 	}}
-	dnsQuestions, _ := deserializeQuestions(in, 2, in)
+	offset := 0
+	dnsQuestions := deserializeQuestions(in, 2, &offset)
 
 	if len(dnsQuestions) != 2 {
 		t.Errorf("Expected 2 questions but read %v", len(dnsQuestions))
@@ -105,8 +129,8 @@ func TestDeserializeOneAnswer(t *testing.T) {
 		RDLENGTH: 4,
 		RDATA:    []byte{8, 8, 8, 8},
 	}}
-
-	dnsAnswers, _ := deserializeAnswers(in, 1, in)
+	offset := 0
+	dnsAnswers := deserializeAnswers(in, 1, &offset)
 
 	t.Logf("dnsAnswers: %v", dnsAnswers)
 	if len(dnsAnswers) != 1 {
@@ -135,8 +159,8 @@ func TestDeserializeMultipleAnswers(t *testing.T) {
 		RDLENGTH: 4,
 		RDATA:    []byte{10, 10, 10, 10},
 	}}
-
-	dnsAnswers, offset := deserializeAnswers(in, 2, in)
+	offset := 0
+	dnsAnswers := deserializeAnswers(in, 2, &offset)
 
 	t.Logf("dnsAnswers: %v", dnsAnswers)
 	if len(dnsAnswers) != 2 {
