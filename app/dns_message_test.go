@@ -36,3 +36,46 @@ func TestSerializeLabels(t *testing.T) {
 		t.Errorf("Expected '%v' but got '%v'", expectedBytes, labelsBytes)
 	}
 }
+
+func TestDeserializeOneQuestion(t *testing.T) {
+	in := []byte{6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1}
+	expected := DnsQuestion{
+		QNAME:  "google.com",
+		QTYPE:  TYPE_A,
+		QCLASS: CLASS_IN,
+	}
+	dnsQuestions, _ := deserializeQuestions(in, 1)
+
+	if len(dnsQuestions) != 1 {
+		t.Errorf("Expected only 1 question but read %v", len(dnsQuestions))
+		t.Logf("Questions deserialized: %v", dnsQuestions)
+	}
+	if dnsQuestions[0] != expected {
+		t.Errorf("Expected %v but got %v", expected, dnsQuestions[0])
+	}
+}
+
+func TestDeserializeMultipleQuestions(t *testing.T) {
+	in := []byte{6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 1, 0, 1, 12, 99, 111, 100, 101, 99, 114, 97, 102, 116, 101, 114, 115, 2, 105, 111, 0, 0, 5, 0, 4}
+	expected := []DnsQuestion{{
+		QNAME:  "google.com",
+		QTYPE:  TYPE_A,
+		QCLASS: CLASS_IN,
+	}, {
+		QNAME:  "codecrafters.io",
+		QTYPE:  TYPE_CNAME,
+		QCLASS: CLASS_HS,
+	}}
+	dnsQuestions, _ := deserializeQuestions(in, 2)
+
+	if len(dnsQuestions) != 2 {
+		t.Errorf("Expected 2 questions but read %v", len(dnsQuestions))
+		t.Logf("Questions deserialized: %v", dnsQuestions)
+	}
+	if dnsQuestions[0] != expected[0] {
+		t.Errorf("Expected %v but got %v", expected, dnsQuestions)
+	}
+	if dnsQuestions[1] != expected[1] {
+		t.Errorf("Expected %v but got %v", expected, dnsQuestions)
+	}
+}

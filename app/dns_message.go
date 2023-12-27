@@ -7,7 +7,7 @@ import (
 
 type DnsMessage struct {
 	Header     DnsHeader
-	Question   DnsQuestion
+	Questions  []DnsQuestion
 	Answer     DnsAnswer
 	Authority  DnsAuthority
 	Additional DnsAdditional
@@ -57,7 +57,7 @@ type DnsAdditional struct {
 func (msg *DnsMessage) serialize() []byte {
 	msgBytes := append(
 		msg.Header.serialize(),
-		msg.Question.serialize()...,
+		serializeQuestions(msg.Questions)...,
 	)
 	msgBytes = append(
 		msgBytes,
@@ -115,14 +115,14 @@ func (flags *HeaderFlags) serialize() uint16 {
 	return flagsBytes
 }
 
-func (question *DnsQuestion) serialize() []byte {
-	var questionBytes []byte
-
-	questionBytes = append(questionBytes, serializeLabels(question.QNAME)...)
-	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QTYPE)
-	questionBytes = binary.BigEndian.AppendUint16(questionBytes, question.QCLASS)
-
-	return questionBytes
+func serializeQuestions(questions []DnsQuestion) []byte {
+	var questionsBytes []byte
+	for _, question := range questions {
+		questionsBytes = append(questionsBytes, serializeLabels(question.QNAME)...)
+		questionsBytes = binary.BigEndian.AppendUint16(questionsBytes, question.QTYPE)
+		questionsBytes = binary.BigEndian.AppendUint16(questionsBytes, question.QCLASS)
+	}
+	return questionsBytes
 }
 
 func serializeLabels(labelsStr string) []byte {
@@ -152,14 +152,14 @@ func (answer *DnsAnswer) serialize() []byte {
 func deserializeMessage(msgBytes []byte) *DnsMessage {
 	dnsHeader := deserializeHeader(msgBytes[0:13])
 	offsetAcc := 12
-	dnsQuestion, questionOffset := deserializeQuestion(msgBytes[offsetAcc:])
-	offsetAcc += questionOffset
+	dnsQuestions, questionsOffset := deserializeQuestions(msgBytes[offsetAcc:], dnsHeader.QDCOUNT)
+	offsetAcc += questionsOffset
 	dnsAnswer, _ := deserializeAnswer(msgBytes[offsetAcc:])
 
 	return &DnsMessage{
-		Header:   *dnsHeader,
-		Question: *dnsQuestion,
-		Answer:   *dnsAnswer,
+		Header:    *dnsHeader,
+		Questions: dnsQuestions,
+		Answer:    *dnsAnswer,
 	}
 }
 
@@ -187,17 +187,24 @@ func deserializeHeaderFlags(flagsBytes []byte) *HeaderFlags {
 	}
 }
 
-func deserializeQuestion(questionBytes []byte) (*DnsQuestion, int) {
-	labels, labelsOffset := deserializeLabels(questionBytes)
-	return &DnsQuestion{
-		QNAME:  labels,
-		QTYPE:  binary.BigEndian.Uint16(questionBytes[labelsOffset : labelsOffset+2]),
-		QCLASS: binary.BigEndian.Uint16(questionBytes[labelsOffset+2 : labelsOffset+4]),
-	}, labelsOffset + 4
+func deserializeQuestions(questionBytes []byte, qdCount uint16) ([]DnsQuestion, int) {
+	questions := make([]DnsQuestion, qdCount)
+	offset := 0
+
+	for i := 0; i < int(qdCount); i++ {
+		labels, labelsOffset := deserializeLabels(questionBytes[offset:])
+		offset += labelsOffset
+		questions[i] = DnsQuestion{
+			QNAME:  labels,
+			QTYPE:  binary.BigEndian.Uint16(questionBytes[offset : offset+2]),
+			QCLASS: binary.BigEndian.Uint16(questionBytes[offset+2 : offset+4]),
+		}
+		offset += 4
+	}
+	return questions, offset
 }
 
 func deserializeLabels(labelsBytes []byte) (string, int) {
-	//6google3com0
 	var labels string
 	var offset int = 1
 	var labelBytesLeft uint8 = 0

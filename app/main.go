@@ -6,10 +6,7 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
-
-	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2053")
+	udpAddr, err := net.ResolveUDPAddr("udp", "192.168.33.1:2053")
 	if err != nil {
 		fmt.Println("Failed to resolve UDP address:", err)
 		return
@@ -75,13 +72,13 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Question: DnsQuestion{
-			QNAME:  receivedMessage.Question.QNAME,
+		Questions: []DnsQuestion{{
+			QNAME:  receivedMessage.Questions[0].QNAME,
 			QTYPE:  TYPE_A,
 			QCLASS: CLASS_IN,
-		},
+		}},
 		Answer: DnsAnswer{
-			NAME:     receivedMessage.Question.QNAME,
+			NAME:     receivedMessage.Questions[0].QNAME,
 			TYPE:     TYPE_A,
 			CLASS:    CLASS_IN,
 			TTL:      60,
