@@ -54,6 +54,19 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 		rcode = 4
 	}
 
+	anCount := receivedMessage.Header.QDCOUNT
+	answers := make([]DnsAnswer, anCount)
+	for i := 0; i < int(anCount); i++ {
+		answers[i] = DnsAnswer{
+			NAME:     receivedMessage.Questions[i].QNAME,
+			TYPE:     TYPE_A,
+			CLASS:    CLASS_IN,
+			TTL:      60,
+			RDLENGTH: 4,
+			RDATA:    []byte{8, 8, 8, 8},
+		}
+	}
+
 	return &DnsMessage{
 		Header: DnsHeader{
 			ID: receivedMessage.Header.ID,
@@ -67,23 +80,12 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 				Z:      0,
 				RCODE:  rcode,
 			},
-			QDCOUNT: 1,
-			ANCOUNT: 1,
+			QDCOUNT: receivedMessage.Header.QDCOUNT,
+			ANCOUNT: anCount,
 			NSCOUNT: 0,
 			ARCOUNT: 0,
 		},
-		Questions: []DnsQuestion{{
-			QNAME:  receivedMessage.Questions[0].QNAME,
-			QTYPE:  TYPE_A,
-			QCLASS: CLASS_IN,
-		}},
-		Answers: []DnsAnswer{{
-			NAME:     receivedMessage.Questions[0].QNAME,
-			TYPE:     TYPE_A,
-			CLASS:    CLASS_IN,
-			TTL:      60,
-			RDLENGTH: 4,
-			RDATA:    []byte{8, 8, 8, 8},
-		}},
+		Questions: receivedMessage.Questions,
+		Answers:   answers,
 	}
 }
