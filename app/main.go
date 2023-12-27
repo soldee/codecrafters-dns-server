@@ -77,13 +77,13 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 			QTYPE:  TYPE_A,
 			QCLASS: CLASS_IN,
 		}},
-		Answer: DnsAnswer{
+		Answers: []DnsAnswer{{
 			NAME:     receivedMessage.Questions[0].QNAME,
 			TYPE:     TYPE_A,
 			CLASS:    CLASS_IN,
 			TTL:      60,
 			RDLENGTH: 4,
 			RDATA:    []byte{8, 8, 8, 8},
-		},
+		}},
 	}
 }
