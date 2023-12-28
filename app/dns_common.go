@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -18,7 +17,6 @@ func serializeLabels(labelsStr string) []byte {
 }
 
 func deserializeLabels(labelsBytes []byte, readBytes []byte) (string, int) {
-	fmt.Printf("labelsBytes: %v\nreadBytes: %v\n\n", labelsBytes, readBytes)
 	var labels string
 	var offset int = 1
 	var labelBytesLeft uint8 = 0

@@ -5,11 +5,26 @@ import (
 	"net"
 )
 
-func runServer(udpConn *net.UDPConn, udpAddr *net.UDPAddr) {
-	buf := make([]byte, 512)
+type Server interface {
+	Run() error
+}
 
+type DefaultServer struct {
+	conn *net.UDPConn
+}
+
+func NewDefaultServer(serverConn *net.UDPConn) *DefaultServer {
+	return &DefaultServer{
+		conn: serverConn,
+	}
+}
+
+func (server *DefaultServer) Run() error {
+	fmt.Println("Running default server")
+
+	buf := make([]byte, 512)
 	for {
-		size, source, err := udpConn.ReadFromUDP(buf)
+		size, source, err := server.conn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error receiving data:", err)
 			break
@@ -28,11 +43,12 @@ func runServer(udpConn *net.UDPConn, udpAddr *net.UDPAddr) {
 		fmt.Printf("Response DNS message bytes: %08b\n", response)
 		fmt.Printf("Response DNS message hex: %v", response)
 
-		_, err = udpConn.WriteToUDP(response, source)
+		_, err = server.conn.WriteToUDP(response, source)
 		if err != nil {
 			fmt.Println("Failed to send response:", err)
 		}
 	}
+	return nil
 }
 
 func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
@@ -40,7 +56,7 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 	if receivedMessage.Header.Flags.OPCODE != 0 {
 		rcode = 4
 	}
-
+	fmt.Println("hi1")
 	anCount := receivedMessage.Header.QDCOUNT
 	answers := make([]DnsAnswer, anCount)
 	for i := 0; i < int(anCount); i++ {
@@ -53,7 +69,7 @@ func generateDnsMessageResponse(receivedMessage *DnsMessage) *DnsMessage {
 			RDATA:    []byte{8, 8, 8, 8},
 		}
 	}
-
+	fmt.Println("hi2")
 	return &DnsMessage{
 		Header: DnsHeader{
 			ID: receivedMessage.Header.ID,

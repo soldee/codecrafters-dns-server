@@ -25,3 +25,16 @@ const (
 	CLASS_CH = 3
 	CLASS_HS = 4
 )
+
+const (
+	RCODE_NOERROR  = 0 // DNS Query completed successfully
+	RCODE_FORMERR  = 1 // DNS Query Format Error
+	RCODE_SERVFAIL = 2 // Server failed to complete the DNS request
+	RCODE_NXDOMAIN = 3 // Domain name does not exist.
+	RCODE_NOTIMP   = 4 // Function not implemented
+	RCODE_REFUSED  = 5 // The server refused to answer for the query
+	RCODE_YXDOMAIN = 6 // Name that should not exist, does exist
+	RCODE_XRRSET   = 7 // RRset that should not exist, does exist
+	RCODE_NOTAUTH  = 8 // Server not authoritative for the zone
+	RCODE_NOTZONE  = 9 // Name not in zone
+)
